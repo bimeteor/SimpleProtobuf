@@ -149,40 +149,46 @@ public class PBDecoder {
     }
     
     public func int32(_ id: Int)-> Int32{
-        return integer(id, format: .varint) ?? 0
+        return integer(id, format: .varint)
     }
     public func uint32(_ id: Int)-> UInt32{
-        return integer(id, format: .varint) ?? 0
+        return integer(id, format: .varint)
     }
     public func sint32(_ id: Int)-> Int32{
-        return Utils.zigZagDecode(integer(id, format: .varint) ?? 0)
+        return Utils.zigZagDecode(integer(id, format: .varint))
     }
     public func int64(_ id: Int)-> Int64{
-        return integer(id, format: .varint) ?? 0
+        return integer(id, format: .varint)
     }
     public func uint64(_ id: Int)-> UInt64{
-        return integer(id, format: .varint) ?? 0
+        return integer(id, format: .varint)
     }
     public func sint64(_ id: Int)-> Int64{
-        return Utils.zigZagDecode(integer(id, format: .varint) ?? 0)
+        return Utils.zigZagDecode(integer(id, format: .varint))
     }
     public func fixed32(_ id: Int)-> UInt32{
-        return integer(id, format: .bit32) ?? 0
+        return integer(id, format: .bit32)
     }
     public func sfixed32(_ id: Int)-> Int32{
-        return integer(id, format: .bit32) ?? 0
+        return integer(id, format: .bit32)
     }
     public func fixed64(_ id: Int)-> UInt64{
-        return integer(id, format: .bit64) ?? 0
+        return integer(id, format: .bit64)
     }
     public func sfixed64(_ id: Int)-> Int64{
-        return integer(id, format: .bit64) ?? 0
+        return integer(id, format: .bit64)
     }
     public func float(_ id: Int)-> Float{
-        return integer(id, format: .bit32) ?? 0
+        var res: Int32 = integer(id, format: .bit32)
+        return  withUnsafePointer(to: &res){
+            $0.withMemoryRebound(to: Float.self, capacity: MemoryLayout<Float>.size){$0.pointee}
+        }
     }
     public func double(_ id: Int)-> Double{
-        return integer(id, format: .bit64) ?? 0
+        var res: Int64 = integer(id, format: .bit64)
+        return  withUnsafePointer(to: &res){
+            $0.withMemoryRebound(to: Double.self, capacity: MemoryLayout<Double>.size){$0.pointee}
+        }
     }
     public func string(_ id: Int)->String{
         if let tag = tags.first(where: {$0.value.id == id}){
@@ -199,22 +205,32 @@ public class PBDecoder {
         return []
     }
     public func int32s(_ id: Int)-> [Int32]{
-        return []
+        return integers(id, format: .varint)
     }
     public func uint32s(_ id: Int)-> [Int32]{
-        return []
+        return integers(id, format: .varint)
     }
     public func int64s(_ id: Int)-> [Int64]{
-        return []
+        return integers(id, format: .varint)
     }
     public func uint64s(_ id: Int)-> [Int64]{
-        return []
+        return integers(id, format: .varint)
     }
     public func floats(_ id: Int)-> [Float]{
-        return []
+        return (integers(id, format: .bit32) as [Int32]).map{
+            var res = $0
+            return  withUnsafePointer(to: &res){
+                $0.withMemoryRebound(to: Float.self, capacity: MemoryLayout<Float>.size){$0.pointee}
+            }
+        }
     }
-    public func doubls(_ id: Int)-> [Double]{
-        return []
+    public func doubles(_ id: Int)-> [Double]{
+        return (integers(id, format: .bit64) as [Int64]).map{
+            var res = $0
+            return  withUnsafePointer(to: &res){
+                $0.withMemoryRebound(to: Double.self, capacity: MemoryLayout<Double>.size){$0.pointee}
+            }
+        }
     }
     public func strings(_ id: Int)-> [Double]{
         return []
@@ -228,30 +244,24 @@ public class PBDecoder {
 }
 
 extension PBDecoder{
-    fileprivate func integer<T>(_ id: Int, format: Utils.Format)->T?{
-        guard let tag = tags.first(where: {$0.value.id == id && $0.value.format == format}) else {return nil}
-        return integer(offset: tag.key + 1, format: format)
+    fileprivate func integer<T: FixedWidthInteger & BinaryInteger>(_ id: Int, format: Utils.Format)->T{
+        return tags.first{$0.value.id == id && $0.value.format == format}.map{integer(offset: $0.key + 1, format: format)} ?? 0
     }
-    fileprivate func integers<T>(_ id: Int, format: Utils.Format)->[T]{
-        #if swift(>=4.1)
-            return tags.filter{$0.value.id == id && $0.value.format == format}.compactMap{integer(offset: $0.key + 1, format: format)}
-        #else
-            return tags.filter{$0.value.id == id && $0.value.format == format}.flatMap{integer(offset: $0.key + 1, format: format)}
-        #endif
+    fileprivate func integers<T: FixedWidthInteger & BinaryInteger>(_ id: Int, format: Utils.Format)->[T]{
+        return tags.filter{$0.value.id == id && $0.value.format == format}.map{integer(offset: $0.key + 1, format: format)}
     }
-    fileprivate func integer<T>(offset: Int, format: Utils.Format)->T?{
-        let size = MemoryLayout<T>.size
+    fileprivate func integer<T: FixedWidthInteger & BinaryInteger>(offset: Int, format: Utils.Format)->T{
         switch format{
         case .bit32, .bit64:
             return withUnsafePointer(to: &array[offset]){
-                $0.withMemoryRebound(to: T.self, capacity: size){$0.pointee}
+                $0.withMemoryRebound(to: T.self, capacity: T.bitWidth){$0.pointee}
             }
         case .varint:
             var val = Utils.varintDecode(array[offset...min(offset + 9, array.count - 1)])
             return withUnsafePointer(to: &val){
-                $0.withMemoryRebound(to: T.self, capacity: size){$0.pointee}
+                $0.withMemoryRebound(to: T.self, capacity: T.bitWidth){$0.pointee}
             }
-        default: return nil
+        default: return 0
         }
     }
 }
