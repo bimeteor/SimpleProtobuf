@@ -26,7 +26,6 @@
     [self initSubControls];
     
     [Utils test];
-    [Utils test1];
 }
 
 /** 增加子控件 */

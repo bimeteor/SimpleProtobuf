@@ -15,7 +15,7 @@
 		9E7DE94C1E00EC460014046A /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 9E7DE94A1E00EC460014046A /* LaunchScreen.storyboard */; };
 		9E7DE9591E00ECA90014046A /* Person.pbobjc.m in Sources */ = {isa = PBXBuildFile; fileRef = 9E7DE9561E00ECA90014046A /* Person.pbobjc.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		9E7DE95A1E00ECA90014046A /* Person.proto in Resources */ = {isa = PBXBuildFile; fileRef = 9E7DE9581E00ECA90014046A /* Person.proto */; };
-		D653805E2093387000AB4E5B /* InputStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = D653805D2093387000AB4E5B /* InputStream.swift */; };
+		D653805E2093387000AB4E5B /* SimpleProtobuf.swift in Sources */ = {isa = PBXBuildFile; fileRef = D653805D2093387000AB4E5B /* SimpleProtobuf.swift */; };
 		ED6973C61EA2407D003B9616 /* CommonShop.pbobjc.m in Sources */ = {isa = PBXBuildFile; fileRef = ED6973C51EA2407D003B9616 /* CommonShop.pbobjc.m */; settings = {COMPILER_FLAGS = "-fno-objc-arc"; }; };
 		ED6973CE1EA2424D003B9616 /* Documentation.html in Resources */ = {isa = PBXBuildFile; fileRef = ED6973C91EA2424D003B9616 /* Documentation.html */; };
 		ED6973CF1EA2424D003B9616 /* GCDAsyncSocket.m in Sources */ = {isa = PBXBuildFile; fileRef = ED6973CB1EA2424D003B9616 /* GCDAsyncSocket.m */; };
@@ -72,7 +72,7 @@
 		9E7DE9581E00ECA90014046A /* Person.proto */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = Person.proto; sourceTree = "<group>"; };
 		9E7DE96C1E00ED180014046A /* PrefixHeader.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PrefixHeader.pch; sourceTree = "<group>"; };
 		D653805C2093386F00AB4E5B /* Tan_ProtocolBuffer-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Tan_ProtocolBuffer-Bridging-Header.h"; sourceTree = "<group>"; };
-		D653805D2093387000AB4E5B /* InputStream.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputStream.swift; sourceTree = "<group>"; };
+		D653805D2093387000AB4E5B /* SimpleProtobuf.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleProtobuf.swift; sourceTree = "<group>"; };
 		ED6973C41EA2407D003B9616 /* CommonShop.pbobjc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommonShop.pbobjc.h; sourceTree = "<group>"; };
 		ED6973C51EA2407D003B9616 /* CommonShop.pbobjc.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CommonShop.pbobjc.m; sourceTree = "<group>"; };
 		ED6973C91EA2424D003B9616 /* Documentation.html */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.html; path = Documentation.html; sourceTree = "<group>"; };
@@ -123,7 +123,7 @@
 				9E7DE9401E00EC460014046A /* AppDelegate.m */,
 				9E7DE9421E00EC460014046A /* ViewController.h */,
 				9E7DE9431E00EC460014046A /* ViewController.m */,
-				D653805D2093387000AB4E5B /* InputStream.swift */,
+				D653805D2093387000AB4E5B /* SimpleProtobuf.swift */,
 				9E7DE9451E00EC460014046A /* Main.storyboard */,
 				9E7DE9481E00EC460014046A /* Assets.xcassets */,
 				9E7DE94A1E00EC460014046A /* LaunchScreen.storyboard */,
@@ -331,7 +331,7 @@
 				ED6973C61EA2407D003B9616 /* CommonShop.pbobjc.m in Sources */,
 				9E7DE9441E00EC460014046A /* ViewController.m in Sources */,
 				9E7DE9411E00EC460014046A /* AppDelegate.m in Sources */,
-				D653805E2093387000AB4E5B /* InputStream.swift in Sources */,
+				D653805E2093387000AB4E5B /* SimpleProtobuf.swift in Sources */,
 				ED6974061EA25CC3003B9616 /* TanSocketConnection.m in Sources */,
 				ED6973D01EA2424D003B9616 /* GCDAsyncUdpSocket.m in Sources */,
 				9E7DE93E1E00EC460014046A /* main.m in Sources */,
