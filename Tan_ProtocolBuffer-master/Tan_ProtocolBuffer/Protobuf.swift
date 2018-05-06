@@ -9,7 +9,7 @@
 import Foundation
 
 @objcMembers
-public class Utils: NSObject{
+public final class PBUtils: NSObject{
     fileprivate enum Format: Int{
         case varint, bit64, bytes, start, stop, bit32
     }
@@ -87,7 +87,7 @@ public class Utils: NSObject{
         an1.namme = "cat"
         
         var dat = Data([0xee,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,0x01])
-        let val = Utils.varintDecode(dat) as Int64
+        let val = PBUtils.varintDecode(dat) as Int64
         print(String.init(UInt64(bitPattern: val), radix: 16))
         
 //        print(dat as NSData)
@@ -123,7 +123,7 @@ public class Utils: NSObject{
     }
 }
 
-public class PBEncoder {
+public final class PBEncoder {
     fileprivate var data: Data
     fileprivate let first: Bool
     
@@ -134,110 +134,110 @@ public class PBEncoder {
     }
     public func set(int32: Int32, id: Int){
         if int32 != 0 {
-            data += [Utils.tag(id, format: .varint)] + Utils.varintEncode(int32)
+            data += [PBUtils.tag(id, format: .varint)] + PBUtils.varintEncode(int32)
         }
     }
     public func set(uint32: UInt32, id: Int){
         if uint32 != 0{
-            data += [Utils.tag(id, format: .varint)] + Utils.varintEncode(uint32)
+            data += [PBUtils.tag(id, format: .varint)] + PBUtils.varintEncode(uint32)
         }
     }
     public func set(sint32: Int32, id: Int){
         if sint32 != 0{
-            data += [Utils.tag(id, format: .varint)] + Utils.varintEncode(Utils.zigZagEncode(sint32))
+            data += [PBUtils.tag(id, format: .varint)] + PBUtils.varintEncode(PBUtils.zigZagEncode(sint32))
         }
     }
     public func set(int64: Int64, id: Int){
         if int64 != 0{
-            data += [Utils.tag(id, format: .varint)] + Utils.varintEncode(int64)
+            data += [PBUtils.tag(id, format: .varint)] + PBUtils.varintEncode(int64)
         }
     }
     public func set(uint64: UInt64, id: Int){
         if uint64 != 0{
-            data += [Utils.tag(id, format: .varint)] + Utils.varintEncode(uint64)
+            data += [PBUtils.tag(id, format: .varint)] + PBUtils.varintEncode(uint64)
         }
     }
     public func set(sint64: Int64, id: Int){
         if sint64 != 0{
-            data += [Utils.tag(id, format: .varint)] + Utils.varintEncode(Utils.zigZagEncode(sint64))
+            data += [PBUtils.tag(id, format: .varint)] + PBUtils.varintEncode(PBUtils.zigZagEncode(sint64))
         }
     }
     public func set(fixed32: UInt32, id: Int){
         if fixed32 != 0{
-            data += [Utils.tag(id, format: .bit32)] + Utils.bytes(fixed32)
+            data += [PBUtils.tag(id, format: .bit32)] + PBUtils.bytes(fixed32)
         }
     }
     public func set(sfixed32: Int32, id: Int){
         if sfixed32 != 0{
-            data += [Utils.tag(id, format: .bit32)] + Utils.bytes(sfixed32)
+            data += [PBUtils.tag(id, format: .bit32)] + PBUtils.bytes(sfixed32)
         }
     }
     public func set(fixed64: UInt64, id: Int){
         if fixed64 != 0{
-            data += [Utils.tag(id, format: .bit64)] + Utils.bytes(fixed64)
+            data += [PBUtils.tag(id, format: .bit64)] + PBUtils.bytes(fixed64)
         }
     }
     public func set(sfixed64: Int64, id: Int){
         if sfixed64 != 0{
-            data += [Utils.tag(id, format: .bit64)] + Utils.bytes(sfixed64)
+            data += [PBUtils.tag(id, format: .bit64)] + PBUtils.bytes(sfixed64)
         }
     }
     public func set(float: Float, id: Int){
         if float != 0{
-            data += [Utils.tag(id, format: .bit32)] + Utils.bytes(float)
+            data += [PBUtils.tag(id, format: .bit32)] + PBUtils.bytes(float)
         }
     }
     public func set(double: Double, id: Int){
         if double != 0{
-            data += [Utils.tag(id, format: .bit64)] + Utils.bytes(double)
+            data += [PBUtils.tag(id, format: .bit64)] + PBUtils.bytes(double)
         }
     }
     public func set(string: String, id: Int){
         if string.count > 0{
-            data += [Utils.tag(id, format: .bytes), UInt8(string.lengthOfBytes(using: .utf8))] + string.utf8
+            data += [PBUtils.tag(id, format: .bytes), UInt8(string.lengthOfBytes(using: .utf8))] + string.utf8
         }
     }
     public func set(data: Data, id: Int){
         if data.count > 0{
-            self.data += [Utils.tag(id, format: .bytes), UInt8(data.count)] + data
+            self.data += [PBUtils.tag(id, format: .bytes), UInt8(data.count)] + data
         }
     }
     public func set(int32s: [Int32], id: Int){
-        let d = int32s.filter{$0 != 0}.reduce(Data()){$0 + Utils.varintEncode($1)}
+        let d = int32s.filter{$0 != 0}.reduce(Data()){$0 + PBUtils.varintEncode($1)}
         if d.count > 0{
-            data += [Utils.tag(id, format: .bytes), UInt8(d.count)] + d
+            data += [PBUtils.tag(id, format: .bytes), UInt8(d.count)] + d
         }
     }
     public func set(uint32s: [UInt32], id: Int){
-        let d = uint32s.filter{$0 != 0}.reduce(Data()){$0 + Utils.varintEncode($1)}
+        let d = uint32s.filter{$0 != 0}.reduce(Data()){$0 + PBUtils.varintEncode($1)}
         if d.count > 0{
-            data += [Utils.tag(id, format: .bytes), UInt8(d.count)] + d
+            data += [PBUtils.tag(id, format: .bytes), UInt8(d.count)] + d
         }
     }
     public func set(int64s: [Int64], id: Int){
-        let d = int64s.filter{$0 != 0}.reduce(Data()){$0 + Utils.varintEncode($1)}
+        let d = int64s.filter{$0 != 0}.reduce(Data()){$0 + PBUtils.varintEncode($1)}
         if d.count > 0{
-            data += [Utils.tag(id, format: .bytes), UInt8(d.count)] + d
+            data += [PBUtils.tag(id, format: .bytes), UInt8(d.count)] + d
         }
     }
     public func set(uint64s: [UInt64], id: Int){
-        let d = uint64s.filter{$0 != 0}.reduce(Data()){$0 + Utils.varintEncode($1)}
+        let d = uint64s.filter{$0 != 0}.reduce(Data()){$0 + PBUtils.varintEncode($1)}
         if d.count > 0{
-            data += [Utils.tag(id, format: .bytes), UInt8(d.count)] + d
+            data += [PBUtils.tag(id, format: .bytes), UInt8(d.count)] + d
         }
     }
 }
 
-public class PBDecoder {
+public final class PBDecoder {
     fileprivate let data: Data
-    fileprivate let tags: [Int: (id: Int, format: Utils.Format)]
+    fileprivate let tags: [Int: (id: Int, format: PBUtils.Format)]
     
     init(_ data: Data, first: Bool = false) {
         self.data = data
-        var arr = [Int: (Int, Utils.Format)]()
+        var arr = [Int: (Int, PBUtils.Format)]()
         var offset = self.data.indices.lowerBound + (first ? 1 : 0)
         while offset < self.data.indices.upperBound {
-            let fmt = Utils.format(self.data[offset])
+            let fmt = PBUtils.format(self.data[offset])
             arr[offset] = fmt
             switch fmt.format{
             case .varint:
@@ -257,22 +257,22 @@ public class PBDecoder {
     }
     
     public func int32(_ id: Int)-> Int32?{
-        return tags.first{$0.value.id == id && $0.value.format == .varint}.map{Utils.varintDecode(data[($0.key + 1)...])}
+        return tags.first{$0.value.id == id && $0.value.format == .varint}.map{PBUtils.varintDecode(data[($0.key + 1)...])}
     }
     public func uint32(_ id: Int)-> UInt32?{
-        return tags.first{$0.value.id == id && $0.value.format == .varint}.map{Utils.varintDecode(data[($0.key + 1)...])}
+        return tags.first{$0.value.id == id && $0.value.format == .varint}.map{PBUtils.varintDecode(data[($0.key + 1)...])}
     }
     public func sint32(_ id: Int)-> Int32?{
-        return tags.first{$0.value.id == id && $0.value.format == .varint}.map{Utils.zigZagDecode(Utils.varintDecode(data[($0.key + 1)...]))}
+        return tags.first{$0.value.id == id && $0.value.format == .varint}.map{PBUtils.zigZagDecode(PBUtils.varintDecode(data[($0.key + 1)...]))}
     }
     public func int64(_ id: Int)-> Int64?{
-        return tags.first{$0.value.id == id && $0.value.format == .varint}.map{Utils.varintDecode(data[($0.key + 1)...])}
+        return tags.first{$0.value.id == id && $0.value.format == .varint}.map{PBUtils.varintDecode(data[($0.key + 1)...])}
     }
     public func uint64(_ id: Int)-> UInt64?{
-        return tags.first{$0.value.id == id && $0.value.format == .varint}.map{Utils.varintDecode(data[($0.key + 1)...])}
+        return tags.first{$0.value.id == id && $0.value.format == .varint}.map{PBUtils.varintDecode(data[($0.key + 1)...])}
     }
     public func sint64(_ id: Int)-> Int64?{
-        return tags.first{$0.value.id == id && $0.value.format == .varint}.map{Utils.zigZagDecode(Utils.varintDecode(data[($0.key + 1)...]))}
+        return tags.first{$0.value.id == id && $0.value.format == .varint}.map{PBUtils.zigZagDecode(PBUtils.varintDecode(data[($0.key + 1)...]))}
     }
     public func fixed32(_ id: Int)-> UInt32?{
         return tags.first{$0.value.id == id && $0.value.format == .bit32}.map{data[($0.key + 1)...].withUnsafeBytes{$0.pointee}}
@@ -287,10 +287,10 @@ public class PBDecoder {
         return tags.first{$0.value.id == id && $0.value.format == .bit64}.map{data[($0.key + 1)...].withUnsafeBytes{$0.pointee}}
     }
     public func float(_ id: Int)-> Float?{
-        return tags.first{$0.value.id == id && $0.value.format == .bit32}.map{Utils.float(data[($0.key + 1)...].withUnsafeBytes{$0.pointee as UInt32})}
+        return tags.first{$0.value.id == id && $0.value.format == .bit32}.map{PBUtils.float(data[($0.key + 1)...].withUnsafeBytes{$0.pointee as UInt32})}
     }
     public func double(_ id: Int)-> Double?{
-        return tags.first{$0.value.id == id && $0.value.format == .bit64}.map{Utils.float(data[($0.key + 1)...].withUnsafeBytes{$0.pointee as UInt32})}
+        return tags.first{$0.value.id == id && $0.value.format == .bit64}.map{PBUtils.float(data[($0.key + 1)...].withUnsafeBytes{$0.pointee as UInt32})}
     }
     public func string(_ id: Int)->String?{
         return tags.first(where: {$0.value.id == id && $0.value.format == .bytes}).flatMap{String(bytes: data[($0.key + 2)..<($0.key + 2 + Int(data[$0.key + 1]))], encoding: .utf8)}
@@ -299,22 +299,22 @@ public class PBDecoder {
         return tags.first(where: {$0.value.id == id && $0.value.format == .bytes}).flatMap{data[($0.key + 2)..<($0.key + 2 + Int(data[$0.key + 1]))]}
     }
     public func int32s(_ id: Int)-> [Int32]{
-        return tags.filter{$0.value.id == id && $0.value.format == .varint}.map{Utils.varintDecode(data[($0.key + 1)...])}
+        return tags.filter{$0.value.id == id && $0.value.format == .varint}.map{PBUtils.varintDecode(data[($0.key + 1)...])}
     }
     public func uint32s(_ id: Int)-> [Int32]{
-        return tags.filter{$0.value.id == id && $0.value.format == .varint}.map{Utils.varintDecode(data[($0.key + 1)...])}
+        return tags.filter{$0.value.id == id && $0.value.format == .varint}.map{PBUtils.varintDecode(data[($0.key + 1)...])}
     }
     public func int64s(_ id: Int)-> [Int64]{
-        return tags.filter{$0.value.id == id && $0.value.format == .varint}.map{Utils.varintDecode(data[($0.key + 1)...])}
+        return tags.filter{$0.value.id == id && $0.value.format == .varint}.map{PBUtils.varintDecode(data[($0.key + 1)...])}
     }
     public func uint64s(_ id: Int)-> [Int64]{
-        return tags.filter{$0.value.id == id && $0.value.format == .varint}.map{Utils.varintDecode(data[($0.key + 1)...])}
+        return tags.filter{$0.value.id == id && $0.value.format == .varint}.map{PBUtils.varintDecode(data[($0.key + 1)...])}
     }
     public func floats(_ id: Int)-> [Float]{
-        return tags.filter{$0.value.id == id && $0.value.format == .bit32}.map{Utils.float(data[($0.key + 1)...].withUnsafeBytes{$0.pointee as UInt32})}
+        return tags.filter{$0.value.id == id && $0.value.format == .bit32}.map{PBUtils.float(data[($0.key + 1)...].withUnsafeBytes{$0.pointee as UInt32})}
     }
     public func doubles(_ id: Int)-> [Double]{
-        return tags.filter{$0.value.id == id && $0.value.format == .bit64}.map{Utils.float(data[($0.key + 1)...].withUnsafeBytes{$0.pointee as UInt64})}
+        return tags.filter{$0.value.id == id && $0.value.format == .bit64}.map{PBUtils.float(data[($0.key + 1)...].withUnsafeBytes{$0.pointee as UInt64})}
     }
     public func strings(_ id: Int)-> [String]{
         #if swift(>=4.1)
