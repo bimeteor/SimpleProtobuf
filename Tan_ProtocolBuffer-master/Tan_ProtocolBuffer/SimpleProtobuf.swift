@@ -237,9 +237,7 @@ public class PBDecoder {
         var arr = [Int: (Int, Utils.Format)]()
         var offset = self.data.indices.lowerBound + (first ? 1 : 0)
         while offset < self.data.indices.upperBound {
-//            print(offset, String(self.data[offset], radix: 16))
             let fmt = Utils.format(self.data[offset])
-//            print("fmt:", fmt.id, fmt.format)
             arr[offset] = fmt
             switch fmt.format{
             case .varint:
