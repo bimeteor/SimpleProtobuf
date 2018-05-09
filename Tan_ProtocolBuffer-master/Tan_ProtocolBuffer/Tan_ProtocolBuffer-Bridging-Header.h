@@ -3,3 +3,4 @@
 //
 
 #import "Person.pbobjc.h"
+#import "GPBCodedInputStream.h"
