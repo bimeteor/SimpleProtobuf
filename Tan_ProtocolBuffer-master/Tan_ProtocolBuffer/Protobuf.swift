@@ -25,26 +25,26 @@ public final class PBUtils: NSObject{
     
     @inline(__always)
     fileprivate static func formatDecode(_ data: Data)->(id: Int, format: Format, value: UInt64, range: CountableRange<Int>)?{
-        let val = Int(data[data.indices.lowerBound])
-        let fmt = Format(rawValue: val & 0b111) ?? .start
-        switch fmt {
-        case .bit32: return (val >> 3, fmt, data[(data.indices.lowerBound + 1)...].withUnsafeBytes{UInt64($0.pointee as UInt32)}, (data.indices.lowerBound + 1)..<(data.indices.lowerBound + 5))
-        case .bit64: return (val >> 3, fmt, data[(data.indices.lowerBound + 1)...].withUnsafeBytes{$0.pointee}, (data.indices.lowerBound + 1)..<(data.indices.lowerBound + 9))
+        let format = varintDecode(data[data.indices.lowerBound...])
+        let key = Int(format.value)
+        let type = Format(rawValue: key & 0b111) ?? .start
+        switch type {
+        case .bit32: return (key >> 3, type, data[(data.indices.lowerBound + format.size)...].withUnsafeBytes{UInt64($0.pointee as UInt32)}, (data.indices.lowerBound + format.size)..<(data.indices.lowerBound + format.size + 4))
+        case .bit64: return (key >> 3, type, data[(data.indices.lowerBound + format.size)...].withUnsafeBytes{$0.pointee}, (data.indices.lowerBound + format.size)..<(data.indices.lowerBound + format.size + 8))
         case .varint:
-            let tuple = varintDecode(data[(data.indices.lowerBound + 1)...])
-            print(String(tuple.value, radix: 16))
-            return (val >> 3, fmt, tuple.value, (data.indices.lowerBound + 1)..<(data.indices.lowerBound + 1 + tuple.size))
+            let value = varintDecode(data[(data.indices.lowerBound + format.size)...])
+            return (key >> 3, type, value.value, (data.indices.lowerBound + format.size)..<(data.indices.lowerBound + format.size + value.size))
         case .bytes:
-            let tuple = varintDecode(data[(data.indices.lowerBound + 1)...])
-            return (val >> 3, fmt, 0, (data.indices.lowerBound + 1 + tuple.size)..<(data.indices.lowerBound + 1 + tuple.size + Int(tuple.value)))
+            let len = varintDecode(data[(data.indices.lowerBound + format.size)...])
+            return (key >> 3, type, 0, (data.indices.lowerBound + format.size + len.size)..<(data.indices.lowerBound + format.size + len.size + Int(len.value)))
         default:
             print("error:", data.indices.lowerBound, String(data[data.indices.lowerBound], radix: 16))
             return nil
         }
     }
     @inline(__always)
-    fileprivate static func formatEncode(_ id: Int, format: Format)->UInt8{
-        return UInt8(id << 3 | format.rawValue)
+    fileprivate static func formatEncode(_ id: Int, format: Format)->Data{
+        return varintEncode(id << 3 | format.rawValue)
     }
     @inline(__always)
     fileprivate static func varintDecode(_ data: Data)->(value: UInt64, size: Int){
@@ -193,7 +193,7 @@ public final class PBEncoder {
     }
     public func set(uint32: UInt32, id: Int){
         if uint32 != 0{
-            data += [PBUtils.formatEncode(id, format: .varint)] + PBUtils.varintEncode(uint32)
+            data += PBUtils.formatEncode(id, format: .varint) + PBUtils.varintEncode(uint32)
         }
     }
     public func set(sint32: Int32, id: Int){
@@ -204,7 +204,7 @@ public final class PBEncoder {
     }
     public func set(uint64: UInt64, id: Int){
         if uint64 != 0{
-            data += [PBUtils.formatEncode(id, format: .varint)] + PBUtils.varintEncode(uint64)
+            data += PBUtils.formatEncode(id, format: .varint) + PBUtils.varintEncode(uint64)
         }
     }
     public func set(sint64: Int64, id: Int){
@@ -212,7 +212,7 @@ public final class PBEncoder {
     }
     public func set(fixed32: UInt32, id: Int){
         if fixed32 != 0{
-            data += [PBUtils.formatEncode(id, format: .bit32)] + PBUtils.bytes(fixed32)
+            data += PBUtils.formatEncode(id, format: .bit32) + PBUtils.bytes(fixed32)
         }
     }
     public func set(sfixed32: Int32, id: Int){
@@ -220,7 +220,7 @@ public final class PBEncoder {
     }
     public func set(fixed64: UInt64, id: Int){
         if fixed64 != 0{
-            data += [PBUtils.formatEncode(id, format: .bit64)] + PBUtils.bytes(fixed64)
+            data += PBUtils.formatEncode(id, format: .bit64) + PBUtils.bytes(fixed64)
         }
     }
     public func set(sfixed64: Int64, id: Int){
@@ -228,12 +228,12 @@ public final class PBEncoder {
     }
     public func set(float: Float, id: Int){
         if float != 0{
-            data += [PBUtils.formatEncode(id, format: .bit32)] + PBUtils.bytes(float)
+            data += PBUtils.formatEncode(id, format: .bit32) + PBUtils.bytes(float)
         }
     }
     public func set(double: Double, id: Int){
         if double != 0{
-            data += [PBUtils.formatEncode(id, format: .bit64)] + PBUtils.bytes(double)
+            data += PBUtils.formatEncode(id, format: .bit64) + PBUtils.bytes(double)
         }
     }
     public func set(string: String, id: Int){
@@ -241,7 +241,7 @@ public final class PBEncoder {
     }
     public func set(data: Data, id: Int){
         if data.count > 0 && data != Data([0]){
-            self.data += [PBUtils.formatEncode(id, format: .bytes)] + PBUtils.varintEncode(data.count) + data
+            self.data += PBUtils.formatEncode(id, format: .bytes) + PBUtils.varintEncode(data.count) + data
         }
     }
     public func set(bools: [Bool], id: Int){
@@ -262,7 +262,7 @@ public final class PBEncoder {
     public func set(uint64s: [UInt64], id: Int){
         if uint64s.count > 0 {
             let d = uint64s.reduce(Data()){$0 + PBUtils.varintEncode($1)}
-            data += [PBUtils.formatEncode(id, format: .bytes)] + PBUtils.varintEncode(d.count) + d
+            data += PBUtils.formatEncode(id, format: .bytes) + PBUtils.varintEncode(d.count) + d
         }
     }
     public func set(sint64s: [Int64], id: Int){
@@ -271,7 +271,7 @@ public final class PBEncoder {
     public func set(fixed32s: [UInt32], id: Int){
         if fixed32s.count > 0 {
             let d = fixed32s.reduce(Data()){$0 + PBUtils.bytes($1)}
-            data += [PBUtils.formatEncode(id, format: .bytes)] + PBUtils.varintEncode(d.count) + d
+            data += PBUtils.formatEncode(id, format: .bytes) + PBUtils.varintEncode(d.count) + d
         }
     }
     public func set(sfixed32s: [Int32], id: Int){
@@ -280,7 +280,7 @@ public final class PBEncoder {
     public func set(fixed64s: [UInt64], id: Int){
         if fixed64s.count > 0 {
             let d = fixed64s.reduce(Data()){$0 + PBUtils.bytes($1)}
-            data += [PBUtils.formatEncode(id, format: .bytes)] + PBUtils.varintEncode(d.count) + d
+            data += PBUtils.formatEncode(id, format: .bytes) + PBUtils.varintEncode(d.count) + d
         }
     }
     public func set(sfixed64s: [Int64], id: Int){
@@ -291,7 +291,7 @@ public final class PBEncoder {
     }
     public func set(datas: [Data], id: Int){
         datas.forEach{
-            data += [PBUtils.formatEncode(id, format: .bytes)] + PBUtils.varintEncode($0.count) + $0
+            data += PBUtils.formatEncode(id, format: .bytes) + PBUtils.varintEncode($0.count) + $0
         }
     }
 }
