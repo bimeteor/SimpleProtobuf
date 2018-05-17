@@ -58,10 +58,15 @@ public final class PBUtils: NSObject{
     }
     @inline(__always)
     fileprivate static func varintEncode<T: FixedWidthInteger & BinaryInteger>(_ value: T)->Data{
-        let val = value >= 0 ? UInt64(value) : UInt64(bitPattern: Int64(value))
-        let low = UInt64(0x7f)
-        let high = UInt64.max - low
-        var offset = UInt64(0)
+        let val: UInt
+        switch value{
+        case is Int, is Int64: val = UInt(bitPattern: Int(value))
+        case is Int32: val = UInt(UInt32(bitPattern: value as! Int32))
+        default: val = UInt(value)
+        }
+        let low = UInt(0x7f)
+        let high = UInt.max - low
+        var offset = UInt(0)
         var next = val & (high << (offset * 7)) > 0
         var data = Data([UInt8(((val & (low << (offset * 7))) >> (offset * 7)) | (next ? 0x80 : 0))])
         while next {
