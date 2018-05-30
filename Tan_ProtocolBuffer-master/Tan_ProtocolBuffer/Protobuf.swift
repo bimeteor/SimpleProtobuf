@@ -22,40 +22,6 @@ public final class PBUtils: NSObject{
             }
         }
     }
-    
-    @inline(__always)
-    fileprivate static func formatDecode(_ data: Data)->(id: Int, format: Format, value: UInt64, range: CountableRange<Int>)?{
-        let format = varintDecode(data[data.indices.lowerBound...])
-        let key = Int(format.value)
-        let type = Format(rawValue: key & 0b111) ?? .start
-        switch type {
-        case .bit32: return (key >> 3, type, data[(data.indices.lowerBound + format.size)...].withUnsafeBytes{UInt64($0.pointee as UInt32)}, (data.indices.lowerBound + format.size)..<(data.indices.lowerBound + format.size + 4))
-        case .bit64: return (key >> 3, type, data[(data.indices.lowerBound + format.size)...].withUnsafeBytes{$0.pointee}, (data.indices.lowerBound + format.size)..<(data.indices.lowerBound + format.size + 8))
-        case .varint:
-            let value = varintDecode(data[(data.indices.lowerBound + format.size)...])
-            return (key >> 3, type, value.value, (data.indices.lowerBound + format.size)..<(data.indices.lowerBound + format.size + value.size))
-        case .bytes:
-            let len = varintDecode(data[(data.indices.lowerBound + format.size)...])
-            return (key >> 3, type, 0, (data.indices.lowerBound + format.size + len.size)..<(data.indices.lowerBound + format.size + len.size + Int(len.value)))
-        default:
-            print("error:", data.indices.lowerBound, String(data[data.indices.lowerBound], radix: 16))
-            return nil
-        }
-    }
-    @inline(__always)
-    fileprivate static func formatEncode(_ id: Int, format: Format)->Data{
-        return varintEncode(id << 3 | format.rawValue)
-    }
-    @inline(__always)
-    fileprivate static func varintDecode(_ data: Data)->(value: UInt64, size: Int){
-        var offset = 0
-        var res = UInt64(data[data.indices.lowerBound + offset])
-        while (data[data.indices.lowerBound + offset] & 0x80) != 0 {
-            offset += 1
-            res |= UInt64(data[data.indices.lowerBound + offset] & 0x7f) << (offset * 7)
-        }
-        return (res, offset + 1)
-    }
     @inline(__always)
     fileprivate static func varintEncode<T: FixedWidthInteger & BinaryInteger>(_ value: T)->Data{
         let val: UInt
@@ -76,19 +42,48 @@ public final class PBUtils: NSObject{
         }
         return data
     }
-    fileprivate static func varintsDecode<T: FixedWidthInteger & BinaryInteger>(_ data: Data)->[T]{
+    @inline(__always)
+    fileprivate static func varintDecode(_ data: Data)->(value: UInt64, size: Int){
         var offset = 0
-        var arr = [T]()
-        while offset < data.indices.upperBound{
-            var val = T(data[data.indices.lowerBound + offset])
-            while (data[data.indices.lowerBound + offset] & 0x80) != 0 {
-                offset += 1
-                val |= T(data[data.indices.lowerBound + offset] & 0x7f) << (offset * 7)
-            }
-            arr.append(val)
+        var res = UInt64(data[data.indices.lowerBound + offset] & 0x7f)
+        while (data[data.indices.lowerBound + offset] & 0x80) != 0 {
             offset += 1
+            res |= UInt64(data[data.indices.lowerBound + offset] & 0x7f) << (offset * 7)
+        }
+        return (res, offset + 1)
+    }
+    fileprivate static func varintsDecode(_ data: Data)->[UInt64]{
+        var offset = 0
+        var arr = [UInt64]()
+        while data.indices.lowerBound + offset < data.indices.upperBound {
+            let res = varintDecode(data[(data.indices.lowerBound + offset)...])
+            arr.append(res.value)
+            offset += res.size
         }
         return arr
+    }
+    @inline(__always)
+    fileprivate static func formatEncode(_ id: Int, format: Format)->Data{
+        return varintEncode(id << 3 | format.rawValue)
+    }
+    @inline(__always)
+    fileprivate static func formatDecode(_ data: Data)->(id: Int, format: Format, value: UInt64, range: CountableRange<Int>)?{
+        let format = varintDecode(data[data.indices.lowerBound...])
+        let key = Int(format.value)
+        let type = Format(rawValue: key & 0b111) ?? .start
+        switch type {
+        case .bit32: return (key >> 3, type, data[(data.indices.lowerBound + format.size)...].withUnsafeBytes{UInt64($0.pointee as UInt32)}, (data.indices.lowerBound + format.size)..<(data.indices.lowerBound + format.size + 4))
+        case .bit64: return (key >> 3, type, data[(data.indices.lowerBound + format.size)...].withUnsafeBytes{$0.pointee}, (data.indices.lowerBound + format.size)..<(data.indices.lowerBound + format.size + 8))
+        case .varint:
+            let value = varintDecode(data[(data.indices.lowerBound + format.size)...])
+            return (key >> 3, type, value.value, (data.indices.lowerBound + format.size)..<(data.indices.lowerBound + format.size + value.size))
+        case .bytes:
+            let len = varintDecode(data[(data.indices.lowerBound + format.size)...])
+            return (key >> 3, type, 0, (data.indices.lowerBound + format.size + len.size)..<(data.indices.lowerBound + format.size + len.size + Int(len.value)))
+        default:
+            print("error:", data.indices.lowerBound, String(data[data.indices.lowerBound], radix: 16))
+            return nil
+        }
     }
     @inline(__always)
     fileprivate static func zigZagEncode(_ value: Int32)->UInt32{
@@ -103,24 +98,17 @@ public final class PBUtils: NSObject{
         return R(value >> 1) ^ R(0 - (value & 1))
     }
     @inline(__always)
-    fileprivate static func float<T: FixedWidthInteger & UnsignedInteger, R>(_ value: T)->R{
-        var res = value
-        return withUnsafePointer(to: &res){
-            $0.withMemoryRebound(to: R.self, capacity: 1){$0.pointee}
-        }
-    }
-    @inline(__always)
     fileprivate static func bytes<T>(_ value: T)->Data{
         var res = value
         return withUnsafePointer(to: &res){
-            $0.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<T>.size){
+            $0.withMemoryRebound(to: UInt8.self, capacity: MemoryLayout<T>.size / 8){
                 Data(bytes: $0, count: MemoryLayout<T>.size)
             }
         }
     }
     @inline(__always)
     fileprivate static func numbers<T>(_ data: Data)->[T]{
-        return data.withUnsafeBytes{ptr in (0..<(data.indices.count / MemoryLayout<T>.size)).map{(ptr + $0).pointee}}
+        return data.withUnsafeBytes{ptr in (0..<(data.indices.count * 8 / MemoryLayout<T>.size)).map{(ptr + $0).pointee}}
     }
     public static func encode(){
         let per = PBEncoder(true)
@@ -158,7 +146,7 @@ public final class PBUtils: NSObject{
         an2.namme = "dog"
         
         let per = Person()
-        per.name = "frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111frank111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+        per.name = "frank"
         per.age = -18
         per.deviceType = .ios
         per.animalsArray = [an1, an2]
@@ -182,7 +170,6 @@ public final class PBUtils: NSObject{
         encode()
         print("=============")
         decode()
-        print(PBUtils.zigZagEncode(Int32(2147483647)) as UInt32)
     }
 }
 
@@ -194,15 +181,15 @@ public final class PBEncoder {
         self.package = package
     }
     public func set(bool: Bool, id: Int){
-        set(uint32: bool ? 1 : 0, id: id)
+        if bool{
+            data += PBUtils.formatEncode(id, format: .varint) + Data([1])
+        }
     }
     public func set(int32: Int32, id: Int){
         set(uint32: UInt32(bitPattern: int32), id: id)
     }
     public func set(uint32: UInt32, id: Int){
-        if uint32 != 0{
-            data += PBUtils.formatEncode(id, format: .varint) + PBUtils.varintEncode(uint32)
-        }
+        set(uint64: UInt64(uint32), id: id)
     }
     public func set(sint32: Int32, id: Int){
         set(uint32: PBUtils.zigZagEncode(sint32), id: id)
@@ -235,14 +222,10 @@ public final class PBEncoder {
         set(fixed64: UInt64(bitPattern: sfixed64), id: id)
     }
     public func set(float: Float, id: Int){
-        if float != 0{
-            data += PBUtils.formatEncode(id, format: .bit32) + PBUtils.bytes(float)
-        }
+        set(fixed32: float.bitPattern, id: id)
     }
     public func set(double: Double, id: Int){
-        if double != 0{
-            data += PBUtils.formatEncode(id, format: .bit64) + PBUtils.bytes(double)
-        }
+        set(fixed64: double.bitPattern, id: id)
     }
     public func set(string: String, id: Int){
         string.data(using: .utf8).map{set(data: $0, id: id)}
@@ -253,7 +236,7 @@ public final class PBEncoder {
         }
     }
     public func set(bools: [Bool], id: Int){
-        set(uint32s: bools.map{$0 ? 1 : 0}, id: id)
+        set(data: Data(bools.map{$0 ? 1 : 0}), id: id)
     }
     public func set(int32s: [Int32], id: Int){
         set(uint32s: int32s.map{UInt32(bitPattern: $0)}, id: id)
@@ -268,39 +251,34 @@ public final class PBEncoder {
         set(uint64s: int64s.map{UInt64(bitPattern: $0)}, id: id)
     }
     public func set(uint64s: [UInt64], id: Int){
-        if uint64s.count > 0 {
-            let d = uint64s.reduce(Data()){$0 + PBUtils.varintEncode($1)}
-            data += PBUtils.formatEncode(id, format: .bytes) + PBUtils.varintEncode(d.count) + d
-        }
+        set(data: Data(uint64s.flatMap{PBUtils.varintEncode($0)}), id: id)
     }
     public func set(sint64s: [Int64], id: Int){
         set(uint64s: sint64s.map{PBUtils.zigZagEncode($0)}, id: id)
     }
     public func set(fixed32s: [UInt32], id: Int){
-        if fixed32s.count > 0 {
-            let d = fixed32s.reduce(Data()){$0 + PBUtils.bytes($1)}
-            data += PBUtils.formatEncode(id, format: .bytes) + PBUtils.varintEncode(d.count) + d
-        }
+        set(data: Data(fixed32s.flatMap{PBUtils.bytes($0)}), id: id)
     }
     public func set(sfixed32s: [Int32], id: Int){
         set(fixed32s: sfixed32s.map{UInt32(bitPattern: $0)}, id: id)
     }
     public func set(fixed64s: [UInt64], id: Int){
-        if fixed64s.count > 0 {
-            let d = fixed64s.reduce(Data()){$0 + PBUtils.bytes($1)}
-            data += PBUtils.formatEncode(id, format: .bytes) + PBUtils.varintEncode(d.count) + d
-        }
+        set(data: Data(fixed64s.flatMap{PBUtils.bytes($0)}), id: id)
     }
     public func set(sfixed64s: [Int64], id: Int){
         set(fixed64s: sfixed64s.map{UInt64(bitPattern: $0)}, id: id)
     }
+    public func set(floats: [Float], id: Int){
+        set(data: Data(floats.flatMap{PBUtils.bytes($0)}), id: id)
+    }
+    public func set(doubles: [Double], id: Int){
+        set(data: Data(doubles.flatMap{PBUtils.bytes($0)}), id: id)
+    }
     public func set(strings: [String], id: Int){
-        set(datas: strings.map{$0.data(using: .utf8) ?? Data([0])}, id: id)
+        strings.forEach{ set(string: $0, id: id) }
     }
     public func set(datas: [Data], id: Int){
-        datas.forEach{
-            data += PBUtils.formatEncode(id, format: .bytes) + PBUtils.varintEncode($0.count) + $0
-        }
+        datas.forEach{ set(data: $0, id: id) }
     }
 }
 
@@ -311,7 +289,7 @@ public final class PBDecoder: NSObject {
     init?(_ data: Data, package: Bool = false) {
         self.data = data
         var arr = type(of: tags).init()
-        var offset = self.data.indices.lowerBound + (package ? PBUtils.varintDecode(self.data[self.data.indices.lowerBound...]).size : 0)
+        var offset = self.data.indices.lowerBound + (package ? PBUtils.varintDecode(self.data).size : 0)
         while offset < self.data.indices.upperBound {
             guard let fmt = PBUtils.formatDecode(self.data[offset...]) else {return nil}
             arr.append(fmt)
@@ -352,7 +330,7 @@ public final class PBDecoder: NSObject {
         return tags.first{$0.id == id && $0.format == .bit32}.map{UInt32($0.value)}
     }
     public func sfixed32(_ id: Int)-> Int32?{
-        return tags.first{$0.id == id && $0.format == .bit32}.map{Int32(Int64(bitPattern: $0.value))}
+        return fixed32(id).map{Int32(bitPattern: $0)}
     }
     public func fixed64(_ id: Int)-> UInt64?{
         return tags.first{$0.id == id && $0.format == .bit64}.map{$0.value}
@@ -361,10 +339,10 @@ public final class PBDecoder: NSObject {
         return fixed64(id).map{Int64(bitPattern: $0)}
     }
     public func float(_ id: Int)-> Float?{
-        return fixed32(id).map{PBUtils.float($0)}
+        return fixed32(id).map{Float(bitPattern: $0)}
     }
     public func double(_ id: Int)-> Double?{
-        return fixed64(id).map{PBUtils.float($0)}
+        return fixed64(id).map{Double(bitPattern: $0)}
     }
     public func string(_ id: Int)->String?{
         return data(id).flatMap{String(bytes: $0, encoding: .utf8)}
@@ -376,16 +354,16 @@ public final class PBDecoder: NSObject {
         return data(id)?.map{$0 != 0} ?? []
     }
     public func int32s(_ id: Int)-> [Int32]{
-        return data(id).map{PBUtils.varintsDecode($0)} ?? []
+        return uint32s(id).map{Int32(bitPattern: $0)}
     }
     public func uint32s(_ id: Int)-> [UInt32]{
-        return data(id).map{PBUtils.varintsDecode($0)} ?? []
+        return uint64s(id).map{UInt32($0)}
     }
     public func sint32s(_ id: Int)-> [Int32]{
         return uint32s(id).map{PBUtils.zigZagDecode($0)}
     }
     public func int64s(_ id: Int)-> [Int64]{
-        return data(id).map{PBUtils.varintsDecode($0)} ?? []
+        return uint64s(id).map{Int64(bitPattern: $0)}
     }
     public func uint64s(_ id: Int)-> [UInt64]{
         return data(id).map{PBUtils.varintsDecode($0)} ?? []

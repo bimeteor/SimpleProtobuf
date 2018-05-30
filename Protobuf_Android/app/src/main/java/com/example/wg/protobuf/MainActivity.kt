@@ -1,11 +1,23 @@
 package com.example.wg.protobuf
 
-import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
-import android.renderscript.Float2
-import android.renderscript.Float4
 
+import android.util.Log
+
+fun IntArray.print(){
+    forEach { println(it) }
+}
+
+fun logv(tag: String, message: Any?){
+    Log.v(tag, message.toString())
+}
+
+fun ByteArray.toHexString() = "[" + joinToString(separator = ","){ it.toHexString() } + "]"
+
+fun IntArray.toHexString() = "[" + joinToString(separator = ","){ it.toString(16) } + "]"
+
+fun Byte.toHexString() = if (this >= 0) toString(16) else (this + 0x100).toString(16)
 
 class MainActivity : AppCompatActivity() {
 
@@ -13,30 +25,34 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val a = -12
-        var b: Int = 12
-//        b = 0xffffffff
-        var c = 12
-        var d = 0xffffffff.javaClass
-//        val c: Int = b shl 24
-//        val d: Int = 0x
-        val low = 0x7f.toLong()
-        val high = (-1).toLong() - low
-        val str = PBUtils.varintEncode(a)
+        val per = PBEncoder(true)
+        per.set("frank", 1)
+        per.set(-18, 2)
+        per.set(0, 3)
 
-        val arr = arrayOf(0xee, 0xff, 0xff, 0xff, 0x0f)
-        val bytes = ByteArray(arr.size){arr[it].toByte()}
+        val an1 = PBEncoder()
+        an1.set(1.1.toFloat(), 1)
+        an1.set(2.2, 2)
+        an1.set("cat", 3)
 
-        val pari = PBUtils.varintDecode(bytes)
-        val zig = PBUtils.zigZagEncode(2147483647)
-        val inttt = 0x80.toByte().toInt()
-        println("xxxxxx")
-        println("aaaaa")
-        println(pari)
-        Float
-//        val intentx = Intent()
-//        intentx.setClassName(this.packageName,"com.example.wg.protobuf.Main2Activity")
-//        startActivity(intentx)
-        Unit
+        val an2 = PBEncoder()
+        an2.set(3.3.toFloat(), 1)
+        an2.set(4.4, 2)
+        an2.set("dog", 3)
+
+        per.set(arrayOf(an1.result(), an2.result()), 5)
+
+        val res = per.result()
+        logv("==", res.toHexString())
+
+        val dec = PBDecoder(res, true)
+        logv("==", dec.string(1))
+        logv("==", dec.int(2))
+        logv("==", dec.int(3))
+        dec.bytess(5).map { PBDecoder(it) }.map {
+            logv("==", it.float(1))
+            logv("==", it.double(2))
+            logv("==", it.string(3))
+        }
     }
 }
